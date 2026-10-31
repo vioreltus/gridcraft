@@ -353,6 +353,16 @@ fn main() -> eframe::Result<()> {
             b.with_x11();
         }));
     }
+    // Intel Macs: Metal's Intel compiler aborts on wgpu's indirect-call validation compute
+    // shaders ("Compiler encountered an internal error"), the device is lost and the app exits
+    // before the window opens. GridCraft issues no indirect draws or dispatches, so Intel Macs
+    // skip them, as WordCraft does (storytold/wordcraft#2652). WGPU_VALIDATION_INDIRECT_CALL=1
+    // turns them back on.
+    #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
+    if let eframe::egui_wgpu::WgpuSetup::CreateNew(create) = &mut options.wgpu_options.wgpu_setup {
+        create.instance_descriptor.flags =
+            create.instance_descriptor.flags.difference(eframe::wgpu::InstanceFlags::VALIDATION_INDIRECT_CALL).with_env();
+    }
     // Before eframe creates the wgpu instance: Windows starts on DirectX 12, or OpenGL when
     // DirectX 12 has no GPU driver, and never touches Vulkan unless asked (see graphics.rs).
     #[cfg(target_os = "windows")]
