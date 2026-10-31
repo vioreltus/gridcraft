@@ -359,6 +359,8 @@ fn main() -> eframe::Result<()> {
     // skip them, as WordCraft does (storytold/wordcraft#2652). WGPU_VALIDATION_INDIRECT_CALL=1
     // turns them back on.
     #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
+    let mut options = options;
+    #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
     if let eframe::egui_wgpu::WgpuSetup::CreateNew(create) = &mut options.wgpu_options.wgpu_setup {
         create.instance_descriptor.flags =
             create.instance_descriptor.flags.difference(eframe::wgpu::InstanceFlags::VALIDATION_INDIRECT_CALL).with_env();
