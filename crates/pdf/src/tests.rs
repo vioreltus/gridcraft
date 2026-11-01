@@ -352,7 +352,7 @@ fn symbol_font_draws_maths_in_its_own_encoding() {
 }
 
 #[test]
-fn latin_extended_letters_use_the_latin_font() {
+fn latin_extended_letters_use_the_latin_font() -> Result<(), Box<dyn Error>> {
     let mut doc = PdfDoc::new();
     let p = doc.add_page(612.0, 792.0);
     p.text(10.0, 20.0, 10.0, Font::Helvetica, [0, 0, 0], "tőrű ŐŰ");
@@ -365,7 +365,7 @@ fn latin_extended_letters_use_the_latin_font() {
         format!("/F1 10 Tf\n(t) Tj\n{ext} 10 Tf\n<D1> Tj\n/F1 10 Tf\n(r) Tj\n{ext} 10 Tf\n<F1> Tj\n/F1 10 Tf\n( ) Tj\n{ext} 10 Tf\n<D0F0> Tj\n");
     assert!(c.contains(&expected), "ő/ű not set through the Latin resource: {c}");
     let pdf = doc.finish();
-    check_xref(&pdf);
+    check_xref(&pdf)?;
     assert!(find(&pdf, CID_BASE_FONT.as_bytes()).is_none(), "CJK font used for Latin letters");
     for name in ["/ohungarumlaut", "/uhungarumlaut", "/Ohungarumlaut", "/Uhungarumlaut"] {
         assert!(find(&pdf, name.as_bytes()).is_some(), "missing glyph name {name}");
@@ -373,21 +373,22 @@ fn latin_extended_letters_use_the_latin_font() {
     assert_eq!(text_width(Font::Helvetica, 10.0, "ő"), text_width(Font::Helvetica, 10.0, "o"));
     assert_eq!(text_width(Font::TimesBold, 10.0, "Ű"), text_width(Font::TimesBold, 10.0, "U"));
     assert_eq!(text_width(Font::Courier, 10.0, "ł"), 6.0);
+    Ok(())
 }
 
 /// Romanian: ă/Ă are Latin Extended-A, ș ț Ș Ț (comma below) are Latin Extended-B. All of them
 /// are set in the Latin face, none in the CJK font (which has no glyph for them: printed boxes).
 #[test]
-fn romanian_letters_use_the_latin_font() {
+fn romanian_letters_use_the_latin_font() -> Result<(), Box<dyn Error>> {
     let mut doc = PdfDoc::new();
     let p = doc.add_page(612.0, 792.0);
     p.text(10.0, 20.0, 10.0, Font::HelveticaBold, [0, 0, 0], "Comandă științe ȘȚ");
     let c = page_content(&doc).to_string();
-    // HelveticaBold is /F2; its Latin Extended twin is /F15. ă = 0x83, ș ț = 0x02 0x04, Ș Ț = 0x01 0x03.
-    let expected = "/F2 10 Tf\n(Comand) Tj\n/F15 10 Tf\n<83> Tj\n/F2 10 Tf\n( ) Tj\n/F15 10 Tf\n<02> Tj\n/F2 10 Tf\n(tiin) Tj\n/F15 10 Tf\n<04> Tj\n/F2 10 Tf\n(e ) Tj\n/F15 10 Tf\n<0103> Tj\n";
+    // HelveticaBold is /F2; its Latin Extended twin is /F16. ă = 0x83, ș ț = 0x02 0x04, Ș Ț = 0x01 0x03.
+    let expected = "/F2 10 Tf\n(Comand) Tj\n/F16 10 Tf\n<83> Tj\n/F2 10 Tf\n( ) Tj\n/F16 10 Tf\n<02> Tj\n/F2 10 Tf\n(tiin) Tj\n/F16 10 Tf\n<04> Tj\n/F2 10 Tf\n(e ) Tj\n/F16 10 Tf\n<0103> Tj\n";
     assert!(c.contains(expected), "Romanian letters not set through the Latin resource: {c}");
     let pdf = doc.finish();
-    check_xref(&pdf);
+    check_xref(&pdf)?;
     assert!(find(&pdf, CID_BASE_FONT.as_bytes()).is_none(), "CJK font used for Romanian letters");
     // Measured like their base letters, not as a full-em CJK glyph.
     assert_eq!(text_width(Font::HelveticaBold, 10.0, "ș"), text_width(Font::HelveticaBold, 10.0, "s"));
@@ -410,10 +411,11 @@ fn romanian_letters_use_the_latin_font() {
             assert_eq!(ext_code(c), Some(code), "{c:?}");
         }
     }
+    Ok(())
 }
 
 #[test]
-fn romanian_comma_below_and_cedilla_letters_stay_distinct() {
+fn romanian_comma_below_and_cedilla_letters_stay_distinct() -> Result<(), Box<dyn Error>> {
     // Romanian writes ș ț with a comma below (U+0218..U+021B); the older cedilla letters ş ţ
     // (U+015E, U+015F, U+0162, U+0163) are other characters and keep their own codes and glyphs.
     // The standard fonts name the T cedilla `Tcommaaccent`, which the AGL maps back to U+0162.
@@ -437,15 +439,33 @@ fn romanian_comma_below_and_cedilla_letters_stay_distinct() {
     let p = doc.add_page(612.0, 792.0);
     p.text(10.0, 20.0, 10.0, Font::Helvetica, [0, 0, 0], "ăşșţțőŁ");
     let c = page_content(&doc).to_string();
-    // ă 0x83, ş 0xDF, ș 0x02, ţ 0xE3, ț 0x04, ő 0xD1, Ł 0xC1, all in /F14 (Helvetica's twin).
-    assert!(c.contains("/F14 10 Tf\n<83DF02E304D1C1> Tj\n"), "{c}");
+    // ă 0x83, ş 0xDF, ș 0x02, ţ 0xE3, ț 0x04, ő 0xD1, Ł 0xC1, all in /F15 (Helvetica's twin).
+    assert!(c.contains("/F15 10 Tf\n<83DF02E304D1C1> Tj\n"), "{c}");
     let pdf = doc.finish();
-    check_xref(&pdf);
+    check_xref(&pdf)?;
     assert!(find(&pdf, b"/Differences [1 /uni0218 /uni0219 /uni021A /uni021B 128 /Amacron").is_some());
+    Ok(())
 }
 
 #[test]
-fn latin_extended_letters_use_each_faces_own_resource() {
+fn symbol_text_never_uses_the_latin_resource() -> Result<(), Box<dyn Error>> {
+    // Symbol has no Latin Extended-A glyphs: ő stays in Symbol's own encoding (as `?`), and no
+    // `/Differences` resource is written for it.
+    let mut doc = PdfDoc::new();
+    let p = doc.add_page(200.0, 200.0);
+    p.text(10.0, 50.0, 12.0, Font::Symbol, [0, 0, 0], "\u{03B1}ő");
+    let c = page_content(&doc).to_string();
+    let symbol = Font::Symbol.index() + 1;
+    assert!(c.contains(&format!("/F{symbol} 12 Tf\n(a?) Tj\n")), "{c}");
+    let pdf = doc.finish();
+    check_xref(&pdf)?;
+    assert!(find(&pdf, b"/BaseFont /Symbol /Encoding").is_none(), "Symbol given an encoding");
+    assert!(find(&pdf, b"/Differences").is_none(), "Latin resource written for Symbol");
+    Ok(())
+}
+
+#[test]
+fn latin_extended_letters_use_each_faces_own_resource() -> Result<(), Box<dyn Error>> {
     // Every text face is routed to a `/Differences` resource with the Latin glyphs. Symbol keeps
     // its own encoding and never uses one (see `symbol_text_never_uses_the_latin_resource`).
     for face in Font::ALL.into_iter().filter(|f| *f != Font::Symbol) {
@@ -458,7 +478,7 @@ fn latin_extended_letters_use_each_faces_own_resource() {
         let c = page_content(&doc).to_string();
         assert!(c.contains(&format!("/F{ext} 10 Tf\n<D1> Tj\n")), "{name}: {c}");
         let pdf = doc.finish();
-        check_xref(&pdf);
+        check_xref(&pdf)?;
         let dict = format!("/BaseFont /{name} /FirstChar 1 /LastChar 255 /Widths [");
         assert!(find(&pdf, dict.as_bytes()).is_some(), "{name}: no widths for the Latin Extended resource");
         let enc = "/Encoding << /Type /Encoding /Differences [1 /uni0218 /uni0219 /uni021A /uni021B 128 /Amacron";
@@ -466,4 +486,5 @@ fn latin_extended_letters_use_each_faces_own_resource() {
         assert!(find(&pdf, format!("/F{ext} ").as_bytes()).is_some(), "{name}: resource missing");
         assert!(find(&pdf, CID_BASE_FONT.as_bytes()).is_none(), "{name}: CJK font used");
     }
+    Ok(())
 }
